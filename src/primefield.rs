@@ -59,6 +59,21 @@ impl<const ORDER: u32> Mul for PrimeFieldU32<ORDER> {
 }
 
 impl<const ORDER: u32> PrimeFieldU32<ORDER> {
+    /// 代表元 (0..ORDER)
+    pub const fn value(&self) -> u32 {
+        self.val
+    }
+
+    /// 平方根を昇順で返す．非平方剰余なら空
+    /// 総当りであることに注意せよ
+    pub fn sqrt(&self) -> Vec<Self> {
+        // 総当たり
+        (0..ORDER)
+            .map(Self::from)
+            .filter(|&x| x * x == *self)
+            .collect()
+    }
+
     /// 拡張ユークリッド互除法による乗法逆元．0 (および ORDER と互いに素でない値) は None
     pub const fn inv(&self) -> Option<Self> {
         // 不変条件: t0 * val ≡ r0, t1 * val ≡ r1 (mod ORDER)
@@ -140,6 +155,22 @@ mod tests {
         let mut back = a / b;
         back *= b;
         assert_eq!(back, a);
+    }
+
+    #[test]
+    fn sqrt_small_field_exhaustive() {
+        // 0 と (19 - 1) / 2 = 9 個の平方剰余
+        let residues = (0..19)
+            .map(PrimeFieldU32::<19>::from)
+            .filter(|a| !a.sqrt().is_empty())
+            .count();
+        assert_eq!(residues, 10);
+        for a in 0..19 {
+            let a = PrimeFieldU32::<19>::from(a);
+            for r in a.sqrt() {
+                assert_eq!(r * r, a);
+            }
+        }
     }
 
     #[test]

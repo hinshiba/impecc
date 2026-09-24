@@ -24,6 +24,22 @@ impl<const ORDER: u32> Curve<ORDER> {
         y * y == x * x * x + self.a * x + self.b
     }
 
+    /// x 座標が x である点を y 昇順で返す
+    pub fn points_with_x(&self, x: PrimeFieldU32<ORDER>) -> Vec<Point<ORDER>> {
+        (x * x * x + self.a * x + self.b)
+            .sqrt()
+            .into_iter()
+            .map(|y| Point::new(x, y, *self))
+            .collect()
+    }
+
+    /// 曲線上の全点を x, y 昇順で返す．無限遠点 O は含まない
+    pub fn points(&self) -> Vec<Point<ORDER>> {
+        (0..ORDER)
+            .flat_map(|x| self.points_with_x(x.into()))
+            .collect()
+    }
+
     pub fn a(&self) -> PrimeFieldU32<ORDER> {
         self.a
     }
@@ -234,6 +250,18 @@ mod tests {
         let c = Curve::new(F::from(1), F::from(0));
         let p = Point::new(F::from(0), F::from(0), c);
         assert!((p + p).is_infinity());
+    }
+
+    #[test]
+    fn enumerate_points() {
+        // y^2 = x^3 + 2 over F_19 のアフィン点は 12 個
+        let c = Curve::<19>::new(0.into(), 2.into());
+        let points = c.points();
+        assert_eq!(points.len(), 12);
+        for p in points {
+            let (x, y) = p.coord().unwrap();
+            assert!(c.on_curve(x, y));
+        }
     }
 
     #[test]
